@@ -170,14 +170,14 @@ class TranslatorPage extends StatelessWidget {
                 inputString = _inputStringController.text;
                 inputStringTranslation = _inputStringTranslationController.text;
                 if (inputString == "" || inputStringTranslation == "") {
-                  print('noInputString');
+                  //print('noInputString');
                   inputString = _inputStringController.text;
                   inputStringTranslation = _inputStringTranslationController.text;
                 } else {
                   appState._dictionaryDatabase.insertWord({
                     'originalWord': inputString,
                     'translatedWord': inputStringTranslation,
-                    'isKnown':0,
+                    'isKnown':'false',
                   });
                 }
               },
@@ -189,7 +189,14 @@ class TranslatorPage extends StatelessWidget {
   }
 }
 
-class CardListPage extends StatelessWidget {
+class CardListPage extends StatefulWidget {
+  const CardListPage({Key? key}) : super(key: key);
+
+  @override
+  _CardListPage createState() => _CardListPage();
+}
+
+class _CardListPage extends State<CardListPage> {
 
   @override
 
@@ -218,12 +225,18 @@ class CardListPage extends StatelessWidget {
                     ),
                       child:ListTile(
                         title:Text(originalWord),
+                        textColor: entry['isKnown']=='true'?Colors.lightGreen:Colors.pink,
                         subtitle: Text(translatedWord),
                         tileColor: Colors.white60,
                         trailing:IconButton(
                             onPressed: (){
-                              print('deleting:'+entry['id']!.toString());
+                              //print('deleting:'+entry['id']!.toString());
                               appState._dictionaryDatabase.removeWord(entry['id'] as int);//??? I'm not sure why either but stackoverflow said
+                              setState(() {
+                                receivedDictionary =
+                                    appState._dictionaryDatabase
+                                        .getDictionary();
+                              });
                             },
                             icon: Icon(Icons.ac_unit_sharp)) ,
                     )
@@ -233,7 +246,7 @@ class CardListPage extends StatelessWidget {
               ),
               TextButton(
                   onPressed: (){
-                    print(getUnknownWords(selectedWords.toList()));
+                    //print(getUnknownWords(selectedWords.toList()));
                     Navigator.push(context,
                         MaterialPageRoute(builder: (context)=>CardPage(
                           selectedWords:getUnknownWords(selectedWords.toList()),
@@ -255,7 +268,7 @@ class CardListPage extends StatelessWidget {
   }
 
   List<Map<String,Object?>> getUnknownWords(List<Map<String,Object?>> wordMap) {
-    print(wordMap);
+    //print(wordMap);
     return [
       for (final map in wordMap)
         if (map['isKnown'] =='false')
@@ -298,10 +311,13 @@ class _CardPageState extends State<CardPage> {
   Widget build(BuildContext context) {
     if (widget.selectedWords.length < 2) {
       return Scaffold(
-        body: Center(child: Text('Add more words ;3')),
-      );
+        body: Column(children:[
+          TextButton(onPressed: (){
+            Navigator.pop(context);
+          }, child: Text('back')),
+          Center(child: Text('Add more words ;3'))],
+        ));
     }
-
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -311,23 +327,12 @@ class _CardPageState extends State<CardPage> {
               children: [
                 TextButton(
                   onPressed: () {
-                    
-
+                    Navigator.pop(context);
                   },
                   child: Text('Back'),
                 )
               ],
             ),
-            /*Column(children:[Center(child:
-            TextButton(
-                onPressed: (){
-                  //widget.selectedWords.remove(value);
-                },
-                child: Text('<')),
-
-            ),
-            ]),
-             */
             Column(children:[Center(
               child: Row(
                 children: [
@@ -337,6 +342,14 @@ class _CardPageState extends State<CardPage> {
                         onPressed: (){
                           //widget.selectedWords.remove(value);
                           //DictionaryDatabase
+                          widget.dictionaryDatabase.markAsKnown(widget.selectedWords[currentIndex]);
+                          widget.selectedWords.remove(widget.selectedWords[currentIndex]);
+                          setState(() {
+                            currentIndex=(currentIndex)%widget.selectedWords.length;
+                            hiddenElement=true;
+                            currElement = Text('');
+                          });
+
                         },
                         child: Text('<IKnowIt!>')),
                     Card(

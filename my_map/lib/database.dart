@@ -88,7 +88,7 @@ class DictionaryDatabase{
     // Perform the update
     await db.update(
       _dictionaryTableName,
-      {'id':entry['id'],'originalWord':entry['originalWord'],'translatedWord':entry['translatedWord'],'isKnown':true},
+      {'id':entry['id'],'originalWord':entry['originalWord'],'translatedWord':entry['translatedWord'],'isKnown':'true'},
       where: 'id = ?',
       whereArgs: [entry['id']],
     );
