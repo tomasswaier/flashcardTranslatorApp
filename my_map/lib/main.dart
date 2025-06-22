@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:ffi';
 import 'dart:io';
 import  'dart:math';
@@ -8,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:translator/translator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/widgets.dart';
 import 'package:my_map/database.dart';
 
@@ -45,33 +47,45 @@ class MyAppState extends ChangeNotifier {
   var translation;
   final DictionaryDatabase _dictionaryDatabase = DictionaryDatabase.instance;
 
+  late String originLanguage;
+  late String foreignLanguage;
+
+
   final translator = GoogleTranslator();
   Future<void> getNext(inputString, foreignString) async {
+      final prefs = await SharedPreferences.getInstance();
+      originLanguage= prefs.getString('originLanguage') ?? 'en';
+      foreignLanguage= prefs.getString('foreignLanguage') ?? 'de';
+      print(originLanguage);
     if (inputString != "") {
       currentString = inputString;
       translation = await translator.translate(
         currentString.toString(),
-        from: 'en',
-        to: 'de',
+        from: originLanguage,
+        to: foreignLanguage,
       );
     } else if (foreignString != "") {
       currentString = await translator.translate(
         foreignString.toString(),
-        from: 'de',
-        to: 'en',
+        from: foreignLanguage,
+        to: originLanguage,
       );
       translation = foreignString;
     } else {
       currentString = WordPair.random().first;
       translation = await translator.translate(
         currentString.toString(),
-        from: 'en',
-        to: 'de',
+        from: originLanguage,
+        to: foreignLanguage,
       );
     }
     notifyListeners();
   }
 
+}
+Future<String> loadOrigin() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString('originLanguage') ?? 'en';
 }
 
 class MyHomePage extends StatefulWidget {
@@ -98,6 +112,10 @@ class _MyHomePage extends State<MyHomePage> {
                   icon: Icon(Icons.add_card),
                   label: Text('MyCars'),
                 ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.settings),
+                  label: Text('Settings'),
+                ),
               ],
               selectedIndex: selectedIndex,
               onDestinationSelected: (value) {
@@ -110,13 +128,28 @@ class _MyHomePage extends State<MyHomePage> {
           Expanded(
             child: Container(
               color: Theme.of(context).colorScheme.primaryContainer,
-              //NO OTEHR PAGES WILL OR SHOULD BE ADDED BECAUSE THIS PROJECT WILL BE A FINISHED PRODUCT WITH ONLY THESE 2 FEATURES
-              child: selectedIndex == 0 ? TranslatorPage() : CardListPage(),
+              child:getPage(selectedIndex)
+
             ),
           ),
         ],
       ),
     );
+  }
+  Widget getPage(int index){
+    switch (selectedIndex){
+      case 0:
+        return TranslatorPage();
+      case 1:
+        return CardListPage();
+      case 2:
+        return SettingsWidget();
+      default:
+        return CardListPage();
+
+    }
+    
+    
   }
 
 }
@@ -131,6 +164,7 @@ class TranslatorPage extends StatelessWidget {
 
     final TextEditingController _inputStringTranslationController =
     TextEditingController(text: appState.translation?.toString() ?? '');
+
 
     String inputString =
         appState.currentString != null ? appState.currentString.toString() : "";
@@ -147,11 +181,21 @@ class TranslatorPage extends StatelessWidget {
       controller: _inputStringTranslationController,
     );
     return Center(
+
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment:MainAxisAlignment.center ,
         children: [
-          inputField,
-          outputField,
+          Row(
+                mainAxisAlignment:MainAxisAlignment.center ,
+                children: [
+            Column(children: [
+              inputField,
+              outputField],),
+            TextButton(onPressed: (){
+              _inputStringTranslationController.text='';
+              _inputStringController.text='';
+              }, child: Text('X'))
+          ]),
           FloatingActionButton.large(
             backgroundColor: Colors.purple,
             child: Text("Translate", style: TextStyle(color: Colors.green)),
@@ -161,14 +205,15 @@ class TranslatorPage extends StatelessWidget {
               appState.getNext(inputString, inputStringTranslation);
             },
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
+          Container(
             child: FloatingActionButton.large(
               backgroundColor: Colors.purple,
               child: Text("<3", style: TextStyle(color: Colors.green)),
               onPressed: () {
                 inputString = _inputStringController.text;
                 inputStringTranslation = _inputStringTranslationController.text;
+                _inputStringTranslationController.text='';
+                _inputStringController.text='';
                 if (inputString == "" || inputStringTranslation == "") {
                   //print('noInputString');
                   inputString = _inputStringController.text;
@@ -177,7 +222,7 @@ class TranslatorPage extends StatelessWidget {
                   appState._dictionaryDatabase.insertWord({
                     'originalWord': inputString,
                     'translatedWord': inputStringTranslation,
-                    'isKnown':'false',
+                    'isKnown':0,
                   });
                 }
               },
@@ -204,14 +249,16 @@ class _CardListPage extends State<CardListPage> {
     var appState = context.watch<MyAppState>();
     // TODO: implement build
     var receivedDictionary = appState._dictionaryDatabase.getDictionary();
-    return Padding(
+    return Scaffold(
+      body:Padding(
       padding: const EdgeInsets.all(12.0),
       child: FutureBuilder<List<Map<String, Object?>>>(
         future: receivedDictionary,
         builder: (context, snapshot) {
           List<Widget> children;
           if (snapshot.hasData) {
-            Iterable<Map<String,Object?>> selectedWords=snapshot.data!.take(10);
+            //print(snapshot.data);
+            Iterable<Map<String,Object?>> selectedWords=snapshot.data!;
             children =[
               Expanded(
                   child: ListView(
@@ -225,13 +272,13 @@ class _CardListPage extends State<CardListPage> {
                     ),
                       child:ListTile(
                         title:Text(originalWord),
-                        textColor: entry['isKnown']=='true'?Colors.lightGreen:Colors.pink,
+                        textColor: entry['isKnown']==0?Colors.lightGreen:Colors.pink,
                         subtitle: Text(translatedWord),
                         tileColor: Colors.white60,
                         trailing:IconButton(
                             onPressed: (){
                               //print('deleting:'+entry['id']!.toString());
-                              appState._dictionaryDatabase.removeWord(entry['id'] as int);//??? I'm not sure why either but stackoverflow said
+                              appState._dictionaryDatabase.removeWord(entry['id'] as int);
                               setState(() {
                                 receivedDictionary =
                                     appState._dictionaryDatabase
@@ -247,16 +294,23 @@ class _CardListPage extends State<CardListPage> {
               TextButton(
                   onPressed: (){
                     //print(getUnknownWords(selectedWords.toList()));
-                    Navigator.push(context,
+                    final result =Navigator.push(context,
                         MaterialPageRoute(builder: (context)=>CardPage(
                           selectedWords:getUnknownWords(selectedWords.toList()),
                           dictionaryDatabase: appState._dictionaryDatabase,
                         )));
+                    if (result==true){
+                      setState(() {
+                        receivedDictionary = appState._dictionaryDatabase.getDictionary();
+                      });
+
+                    }
+
                   },
                   child: Text('<Start!>')),
             ];
           } else {
-            return Column(children: [Text('Error')]);
+            return Column(children: [Text('loading')]);
           }
           //for (var i =0;i<snapshot.data!.length;i++) {
           //  print(snapshot.data?[i]);
@@ -264,14 +318,14 @@ class _CardListPage extends State<CardListPage> {
           return Column(children: children);
         },
       ),
-    );
+    ));
   }
 
   List<Map<String,Object?>> getUnknownWords(List<Map<String,Object?>> wordMap) {
     //print(wordMap);
     return [
       for (final map in wordMap)
-        if (map['isKnown'] =='false')
+        if (map['isKnown'] ==0)
           {
             'id': map['id'],
             'originalWord': map['originalWord'],
@@ -313,7 +367,7 @@ class _CardPageState extends State<CardPage> {
       return Scaffold(
         body: Column(children:[
           TextButton(onPressed: (){
-            Navigator.pop(context);
+            Navigator.pop(context,true);
           }, child: Text('back')),
           Center(child: Text('Add more words ;3'))],
         ));
@@ -322,22 +376,28 @@ class _CardPageState extends State<CardPage> {
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Row(
               children: [
                 TextButton(
                   onPressed: () {
-                    Navigator.pop(context);
+                    Navigator.pop(context,true);
                   },
                   child: Text('Back'),
                 )
               ],
             ),
-            Column(children:[Center(
-              child: Row(
+            Column(
+
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children:[Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                 children: [
 
-                  Column( children:[
+                  Column(
+                      children:[
                     TextButton(
                         onPressed: (){
                           //widget.selectedWords.remove(value);
@@ -351,7 +411,7 @@ class _CardPageState extends State<CardPage> {
                           });
 
                         },
-                        child: Text('<IKnowIt!>')),
+                        child: Text('<I KnowIt!>')),
                     Card(
                     child: SizedBox(
                       width: 200,
@@ -362,7 +422,13 @@ class _CardPageState extends State<CardPage> {
                     ),
                   ),
                   ElevatedButton(
+                    style:ElevatedButton.styleFrom(
+                      shape:  RoundedRectangleBorder(
+                         borderRadius: BorderRadius.circular(20)
+                      ),
+                    ),
                     onPressed: () {
+
                       setState(() {
                         if (hiddenElement){
                          currElement=Text(widget.selectedWords[currentIndex]['translatedWord'].toString());
@@ -378,23 +444,19 @@ class _CardPageState extends State<CardPage> {
                       child: Center(child: currElement),
                     ),
                   ),
-                ])
+                ]),
+                  TextButton(
+                      onPressed: (){
+                        //widget.selectedWords.remove(value);
+                        setState(() {
+                          currentIndex=(currentIndex+1)%widget.selectedWords.length;
+                          hiddenElement=true;
+                          currElement = Text('');
+                        });
+                      },
+                      child: Text('>')),
                 ],
               ),
-            )]),
-            Column(children:[Center(child:
-            TextButton(
-                onPressed: (){
-                  //widget.selectedWords.remove(value);
-                  setState(() {
-                    currentIndex=(currentIndex+1)%widget.selectedWords.length;
-                    hiddenElement=true;
-                    currElement = Text('');
-                  });
-                },
-                child: Text('>')),
-
-            ),
             ]),
           ],
         ),
@@ -441,6 +503,135 @@ class WrapperWidget extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+
+class SettingsWidget extends StatefulWidget {
+  const SettingsWidget({super.key});
+
+  @override
+  State<SettingsWidget> createState() => _SettingsWidgetState();
+}
+
+class _SettingsWidgetState extends State<SettingsWidget> {
+  LanguageLabel? originLanguage;
+  LanguageLabel? foreignLanguage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [Padding(
+      padding: const EdgeInsets.all(40),
+      child: FutureBuilder(
+
+          future: getPreferences(),
+          builder: (BuildContext context,AsyncSnapshot snapshot)
+          {
+            if (snapshot.hasData){
+              print(snapshot.data!.getString('originLanguage'));
+              originLanguage = LanguageLabel.fromString(snapshot.data!.getString('originLanguage'));
+              foreignLanguage = LanguageLabel.fromString(snapshot.data!.getString('foreignLanguage'));
+            return Column(children:[ DropdownMenu<LanguageLabel>(
+        width: 300, // Fixed width for consistent behavior
+        initialSelection: originLanguage ?? LanguageLabel.en,
+        dropdownMenuEntries: LanguageLabel.entries,
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.all(20),
+        ),
+        menuStyle: MenuStyle(
+          elevation: WidgetStateProperty.all(8),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        onSelected: (LanguageLabel? language) {
+          setState(() {
+            originLanguage= language;
+            savePref('originLanguage', originLanguage!.language.toString());
+          });
+        },
+        controller: TextEditingController(
+          text: originLanguage?.label ?? 'Select language',
+        ),
+        label: const Text('Language'),
+      ),Padding(padding: EdgeInsets.all(20),
+        child:DropdownMenu<LanguageLabel>(
+        width: 300, // Fixed width for consistent behavior
+        initialSelection: foreignLanguage?? LanguageLabel.de,
+        dropdownMenuEntries: LanguageLabel.entries,
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.all(20),
+        ),
+        menuStyle: MenuStyle(
+          elevation: WidgetStateProperty.all(8),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        onSelected: (LanguageLabel? language) {
+          setState(() {
+            foreignLanguage= language;
+            savePref('foreignLanguage', foreignLanguage!.language.toString());
+
+          });
+        },
+        controller: TextEditingController(
+          text: foreignLanguage?.label ?? 'Select language',
+        ),
+        label: const Text('Language'),
+      )),
+      ]);}else{
+            return Text('loading');
+            }
+
+            ;}
+    )
+    )]);
+  }
+  Future<void> savePref(String prefKey, String newLanguage) async{
+    print(prefKey);
+    print(newLanguage);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(prefKey, newLanguage);
+    return ;
+  }
+}
+
+Future<SharedPreferences> getPreferences(){
+  return SharedPreferences.getInstance();
+}
+
+enum LanguageLabel {
+  en('English', 'en'),
+  de('Deutsch', 'de'),
+  sk('Slovak', 'sk'),
+  ua('Ukrainian', 'ua'),
+  ru('Russian', 'ru');
+
+  const LanguageLabel(this.label, this.language);
+  final String label;
+  final String language;
+  // this is the only part in this project from llm. I tried to do it the recommended way from doc but it had issues
+  static List<DropdownMenuEntry<LanguageLabel>> get entries =>
+      values.map<DropdownMenuEntry<LanguageLabel>>(
+            (LanguageLabel language) => DropdownMenuEntry(
+          value: language,
+          label: language.label,
+        ),
+      ).toList();
+
+  static LanguageLabel? fromString(String? languageCode) {
+    if (languageCode == null) return null;
+    return LanguageLabel.values.firstWhere(
+          (e) => e.language == languageCode,
+      orElse: () => LanguageLabel.en,
     );
   }
 }

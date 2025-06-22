@@ -26,13 +26,6 @@ class DictionaryDatabase{
         'CREATE TABLE dictionary(id INTEGER PRIMARY KEY, originalWord TEXT,translatedWord TEXT,isKnown INTEGER)',
       );
       },
-      onUpgrade: (db, oldVersion, newVersion) async {
-      if (oldVersion < 4) {
-        await db.execute(
-          'ALTER TABLE dictionary ADD COLUMN isKnown INTEGER DEFAULT 0',
-        );
-      }
-    },
     );
     return database;
   }
@@ -88,7 +81,7 @@ class DictionaryDatabase{
     // Perform the update
     await db.update(
       _dictionaryTableName,
-      {'id':entry['id'],'originalWord':entry['originalWord'],'translatedWord':entry['translatedWord'],'isKnown':'true'},
+      {'id':entry['id'],'originalWord':entry['originalWord'],'translatedWord':entry['translatedWord'],'isKnown':1},
       where: 'id = ?',
       whereArgs: [entry['id']],
     );
@@ -113,7 +106,7 @@ class Dictionary{
   final int id;
   final String originalWord;
   final String translatedWord;
-  final bool isKnown;
+  final int isKnown;
 
   Dictionary({
     required this.id ,
