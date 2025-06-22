@@ -87,7 +87,7 @@ class DictionaryDatabase{
 
     // Perform the update
     await db.update(
-      'DictionaryDatabase',
+      _dictionaryTableName,
       {'id':entry['id'],'originalWord':entry['originalWord'],'translatedWord':entry['translatedWord'],'isKnown':true},
       where: 'id = ?',
       whereArgs: [entry['id']],
@@ -100,7 +100,7 @@ class DictionaryDatabase{
 
     // Remove the Dog from the database.
     await db.delete(
-      'dogs',
+      _dictionaryTableName,
       // Use a `where` clause to delete a specific dog.
       where: 'id = ?',
       // Pass the Dog's id as a whereArg to prevent SQL injection.

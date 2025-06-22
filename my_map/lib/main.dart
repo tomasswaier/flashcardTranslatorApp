@@ -220,7 +220,12 @@ class CardListPage extends StatelessWidget {
                         title:Text(originalWord),
                         subtitle: Text(translatedWord),
                         tileColor: Colors.white60,
-                        trailing:IconButton(onPressed: (){print('deleting:'+entry['id']!.toString());}, icon: Icon(Icons.ac_unit_sharp)) ,
+                        trailing:IconButton(
+                            onPressed: (){
+                              print('deleting:'+entry['id']!.toString());
+                              appState._dictionaryDatabase.removeWord(entry['id'] as int);//??? I'm not sure why either but stackoverflow said
+                            },
+                            icon: Icon(Icons.ac_unit_sharp)) ,
                     )
                   );
                 }).toList(),
