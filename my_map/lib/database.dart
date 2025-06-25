@@ -18,16 +18,23 @@ class DictionaryDatabase{
   }
 
   Future<Database> createInstance() async {
-    final database = openDatabase(
-      join(await getDatabasesPath() , 'dictionary.db'),
-      version:3,
-      onCreate: (db,version) {
-        return db.execute(
-        'CREATE TABLE dictionary(id INTEGER PRIMARY KEY, originalWord TEXT,translatedWord TEXT,isKnown INTEGER)',
+    try {
+      final database = await openDatabase(
+        join(await getDatabasesPath(), 'dictionary.db'),
+        version: 3,
+        onCreate: (db, version) {
+          return db.execute(
+            'CREATE TABLE dictionary(id INTEGER PRIMARY KEY, originalWord TEXT,translatedWord TEXT,isKnown INTEGER)',
+          );
+        },
       );
-      },
-    );
-    return database;
+      print('Database opened successfully');
+      return database;
+    }
+    catch(e) {
+      print('Error opening db : $e');
+      rethrow;
+    }
   }
 
 

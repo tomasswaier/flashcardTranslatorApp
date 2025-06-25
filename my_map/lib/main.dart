@@ -7,20 +7,20 @@ import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:sqflite/sqflite.dart';
+//import 'package:sqflite/sqflite.dart';
 import 'package:translator/translator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/widgets.dart';
+//import 'package:flutter/widgets.dart';
 import 'package:my_map/database.dart';
 
 void main() async {
   if (Platform.isWindows || Platform.isLinux) {
     // Initialize FFI
     sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
   }
   // Change the default factory. On iOS/Android, if not using `sqlite_flutter_lib` you can forget
   // this step, it will use the sqlite version available on the system.
-  databaseFactory = databaseFactoryFfi;
 
   runApp(MyApp());
 }
@@ -163,34 +163,50 @@ class TranslatorPage extends StatelessWidget {
     TextEditingController(text: appState.currentString?.toString() ?? '');
 
     final TextEditingController _inputStringTranslationController =
-    TextEditingController(text: appState.translation?.toString() ?? '');
+    TextEditingController(
+        text: appState.translation?.toString() ?? '');
 
 
     String inputString =
         appState.currentString != null ? appState.currentString.toString() : "";
     String inputStringTranslation =
         appState.translation != null ? appState.translation.toString() : "";
-    var inputField = WrapperWidget(
-      word: inputString,
-      sentence: "original word",
+    var inputField =SizedBox(
+      width: 250,
+        child:TextField(
+      //word: inputString,
+      maxLength:100,
+
       controller: _inputStringController,
-    );
-    var outputField = WrapperWidget(
-      word: inputStringTranslation,
-      sentence: "translation",
+      decoration: InputDecoration(
+        labelText: 'original word',
+
+
+      ),
+    ));
+    var outputField = SizedBox(
+      width: 250,
+        child:TextField(
+      //word: inputString,
+      maxLength:100,
       controller: _inputStringTranslationController,
-    );
+          decoration: InputDecoration(
+            labelText: 'translated word',
+
+
+          ),
+        ));
     return Center(
 
       child: Column(
         mainAxisAlignment:MainAxisAlignment.center ,
         children: [
           Row(
-                mainAxisAlignment:MainAxisAlignment.center ,
                 children: [
             Column(children: [
-              inputField,
-              outputField],),
+                  inputField,
+               outputField,
+            ]),
             TextButton(onPressed: (){
               _inputStringTranslationController.text='';
               _inputStringController.text='';
@@ -272,7 +288,7 @@ class _CardListPage extends State<CardListPage> {
                     ),
                       child:ListTile(
                         title:Text(originalWord),
-                        textColor: entry['isKnown']==0?Colors.lightGreen:Colors.pink,
+                        textColor: entry['isKnown']==0?Colors.pink:Colors.lightGreen,
                         subtitle: Text(translatedWord),
                         tileColor: Colors.white60,
                         trailing:IconButton(
@@ -358,7 +374,7 @@ class _CardPageState extends State<CardPage> {
   @override
   void initState() {
     super.initState();
-    currElement = Text('');
+    currElement = Text(widget.selectedWords[currentIndex]['originalWord'].toString());
   }
 
   @override
@@ -407,12 +423,12 @@ class _CardPageState extends State<CardPage> {
                           setState(() {
                             currentIndex=(currentIndex)%widget.selectedWords.length;
                             hiddenElement=true;
-                            currElement = Text('');
+                            currElement = Text(widget.selectedWords[currentIndex]['originalWord'].toString());
                           });
 
                         },
                         child: Text('<I KnowIt!>')),
-                    Card(
+                    /*Card(
                     child: SizedBox(
                       width: 200,
                       height: 100,
@@ -421,6 +437,7 @@ class _CardPageState extends State<CardPage> {
                       ),
                     ),
                   ),
+                     */
                   ElevatedButton(
                     style:ElevatedButton.styleFrom(
                       shape:  RoundedRectangleBorder(
@@ -433,7 +450,7 @@ class _CardPageState extends State<CardPage> {
                         if (hiddenElement){
                          currElement=Text(widget.selectedWords[currentIndex]['translatedWord'].toString());
                         }else{
-                          currElement = Text('');
+                          currElement = Text(widget.selectedWords[currentIndex]['originalWord'].toString());
                         }
                       });
                       hiddenElement=!hiddenElement;
@@ -451,7 +468,7 @@ class _CardPageState extends State<CardPage> {
                         setState(() {
                           currentIndex=(currentIndex+1)%widget.selectedWords.length;
                           hiddenElement=true;
-                          currElement = Text('');
+                          currElement = Text(widget.selectedWords[currentIndex]['originalWord'].toString());
                         });
                       },
                       child: Text('>')),
@@ -557,7 +574,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
         controller: TextEditingController(
           text: originLanguage?.label ?? 'Select language',
         ),
-        label: const Text('Language'),
+        label: const Text('Origin Language'),
       ),Padding(padding: EdgeInsets.all(20),
         child:DropdownMenu<LanguageLabel>(
         width: 300, // Fixed width for consistent behavior
@@ -585,13 +602,13 @@ class _SettingsWidgetState extends State<SettingsWidget> {
         controller: TextEditingController(
           text: foreignLanguage?.label ?? 'Select language',
         ),
-        label: const Text('Language'),
+        label: const Text('Foreign Language'),
       )),
       ]);}else{
             return Text('loading');
             }
 
-            ;}
+            }
     )
     )]);
   }
