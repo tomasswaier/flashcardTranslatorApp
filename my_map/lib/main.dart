@@ -312,7 +312,7 @@ class _CardListPage extends State<CardListPage> {
                     //print(getUnknownWords(selectedWords.toList()));
                     final result =Navigator.push(context,
                         MaterialPageRoute(builder: (context)=>CardPage(
-                          selectedWords:getUnknownWords(selectedWords.toList()),
+                          selectedWords:getUnknownWords(selectedWords.toList()).take(10).toList(),
                           dictionaryDatabase: appState._dictionaryDatabase,
                         )));
                     if (result==true){
@@ -341,7 +341,7 @@ class _CardListPage extends State<CardListPage> {
     //print(wordMap);
     return [
       for (final map in wordMap)
-        if (map['isKnown'] ==0)
+        if (map['isKnown'] ==0 || map['isKnown'] ==false)
           {
             'id': map['id'],
             'originalWord': map['originalWord'],
@@ -404,15 +404,17 @@ class _CardPageState extends State<CardPage> {
                 )
               ],
             ),
-            Column(
+                 Expanded(
+                     child: Column(
 
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children:[Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                  Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                 children: [
 
                   Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children:[
                     TextButton(
                         onPressed: (){
@@ -466,6 +468,13 @@ class _CardPageState extends State<CardPage> {
                       onPressed: (){
                         //widget.selectedWords.remove(value);
                         setState(() {
+                          if(currentIndex+1==widget.selectedWords.length){
+                            for (var i = 0; i < widget.selectedWords.length; i++) {
+                              var temp= widget.selectedWords[i]['originalWord'].toString();
+                              widget.selectedWords[i]['originalWord']=widget.selectedWords[i]['translatedWord'].toString();
+                              widget.selectedWords[i]['translatedWord']=temp;
+                            }
+                          }
                           currentIndex=(currentIndex+1)%widget.selectedWords.length;
                           hiddenElement=true;
                           currElement = Text(widget.selectedWords[currentIndex]['originalWord'].toString());
@@ -473,8 +482,7 @@ class _CardPageState extends State<CardPage> {
                       },
                       child: Text('>')),
                 ],
-              ),
-            ]),
+              )])),
           ],
         ),
       ),

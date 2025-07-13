@@ -67,7 +67,7 @@ class DictionaryDatabase{
     // Filter and map only the not-known words
     return [
       for (final map in wordMap)
-        if (map['isKnown'] == false)
+        if (map['isKnown'] == false || map['isKnown'] == 0)
           {
             'id': map['id'],
             'originalWord': map['originalWord'],
